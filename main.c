@@ -1,123 +1,67 @@
+
 /* ##################################################################
-# MILESTONE: 2
-# PROGRAM: 2
-# PROJECT: Lab2 Demo
+# MILESTONE: 3
+# PROGRAM: 3
+# PROJECT: Lab3 Demo
 # GROUP: 10
 # NAME 1: Dmitri Karaman, Student ID
 # NAME 2: Ruben Henri, V00988496
-# DESC: This program does a knight rider effect using bit shifting and the built in timer to delays
+# DESC: This program reads input from two leftmost switch positions and the left momentary switch. It displays the values on the yellow and green LEDS as well.
 # DATA
 # REVISED ############################################################### */
 
 #include <stdlib.h>			// the header of the general-purpose standard library of C
 #include <avr/io.h>			// the header of I/O port
-#include <avr/interrupt.h>	// Needed for interrupt functionality 
+#include <avr/interrupt.h>	// Needed for interrupt functionality
 #include <util/delay_basic.h>
+
 void mTimer(int count);
+int debug(char input);
 
 /* ################## MAIN ROUTINE ################## */
 int main(int argc, char *argv[]){
-	DDRL = 0xFF;; // Sets all pins on PORTL to output
-	DDRC = 0xFF; // Sets all pins on PORTC to output
-	PORTL = 0xC0; // initialize pins to high to turn on LEDs (1 Yel & 1 Grn)
-	uint8_t d = 200;
-	uint8_t dir = 1;	// direction 1 = shifting right, 0 means shifting left
-	uint8_t pattern = 0xC0; // start with two leftmost bits on
+	
+	char readInput;
+	DDRL = 0xF0;			// set PORT L pin 7:5 as output
+	DDRA = 0x00;			// Set all pins on PORTA to input
+	DDRC = 0xFF;			// Set all pins on PORTC to output
+	uint8_t d = 200;		// variable for timer delay in ms
+	uint8_t pattern;		// Variable for PORTC bit pattern
 	
 	CLKPR = 0x80;		//
 	CLKPR = 0x01;		// Sets CPU clk to 8MHz
 	
-	//TCCR1B |= _BV(CS11);	// BV sets the bit to logic 1
-						// Register is TCCR1B1
-						// RCCR1 is the timer/counter control register 1
-						// B is the 'B' register and 1 is bit 1
-						// CS means clock select and has a pre-scaler set to 8
-	 	
 	while(1){
+		readInput = PINA;		// Read value from register PINA (Not PORTA)
+// 		PORTC = pattern;		//
+// 		mTimer(d);		// wait for d ms
+		PORTL = (readInput << 4);
+		debug(readInput);
 		
-		PORTC = pattern; // initialize LED 7 and 6 as on (leftmost two LEDS)
-		mTimer(d);		// wait for d ms
-		
-		if(dir){
-			pattern >>= 1;	// bitshift pattern right
-			if(pattern == 0x03) {	// 0x03 = 0b00000011
-				dir = 0;			// time to go left
-			}
-		} else {
-			pattern <<= 1;	// bitshift pattern left
-			if(pattern == 0xC0){	//0xC0 = 0b11000000
-				dir = 1;
-			}
-		}
-	
-//Knight Rider with for loops and bitshifting		
-// 		PORTC = 0xC0; // initialize LED 7 and 6 as on (leftmost two LEDS)
-// 		mTimer(d);		// wait for d ms		
-// 		for (int j = 0; j < 2; j++){
-// 			PORTC = (PORTC >> 1) | PORTC;	
-// 			mTimer(d);		// wait for d ms	
-// 		}
-// 		for (int k = 0; k < 6; k++){
-// 			PORTC = (PORTC >> 1);
-// 			mTimer(d);		// wait for d ms
-// 		}
-// 		for (int j = 0; j < 2; j++){
-// 			PORTC = (PORTC << 1) | PORTC;
-// 			mTimer(d);		// wait for d ms
-// 		}
-// 		for (int k = 0; k < 6; k++){
-// 			PORTC = (PORTC << 1);
-// 			mTimer(d);		// wait for d ms
-// 		}		
-
-// Knight Rider the long way
-// 		PORTC = 0b11100000;
-// 		delaynms(d);
-// 		PORTC = 0b11110000;
-// 		delaynms(d);
-// 		PORTC = 0b01111000;
-// 		delaynms(d);
-// 		PORTC = 0b00111100;
-// 		delaynms(d);
-// 		PORTC = 0b00011110;
-// 		delaynms(d);
-// 		PORTC = 0b00001111;
-// 		delaynms(d);
-// 		PORTC = 0b00000111;
-// 		delaynms(d);
-// 		PORTC = 0b00000011;
-// 		delaynms(d);
-// 		PORTC = 0b00000111;
-// 		delaynms(d);
-// 		PORTC = 0b00001111;
-// 		delaynms(d);
-// 		PORTC = 0b00011110;
-// 		delaynms(d);
-// 		PORTC = 0b00111100;
-// 		delaynms(d);
-// 		PORTC = 0b01111000;
-// 		delaynms(d);
-// 		PORTC = 0b11110000;
-// 		delaynms(d);
-// 		PORTC = 0b11100000;
-// 		delaynms(d);
-	
 	}
 	return (0);
 }
 
-void delaynus(int n) // delay microsecond
-{
-	int k;
-	for(k=0;k<n;k++)
-	_delay_loop_1(1);
-}
-void delaynms(int n) // delay millisecond
-{
-	int k;
-	for(k=0;k<n;k++)
-	delaynus(1000);
-}
+int debug(char input){
+	switch (input){
+		case (0x01):
+			PORTC = 0b00000001;
+			break;
+		case (0x02):
+			PORTC = 0b00000010;
+			break;
+		case (0x04):
+			PORTC = 0b00000100;
+			break;
+		case (0x08):
+			PORTC = 0b00001000;
+			break;
+		default:
+			PORTC = 0b00000000;
+			break;				
+	}	// end switch
+	return(input);
+}	// end debug
 
 void mTimer(int count){
 	int i = 0; // init loop counter, set to zero
