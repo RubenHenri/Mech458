@@ -6,14 +6,15 @@
 # GROUP: 10
 # NAME 1: Dmitri Karaman, Student ID
 # NAME 2: Ruben Henri, V00988496
-# DESC: This program reads input from two leftmost switch positions and the left momentary switch. It displays the values on the yellow and green LEDS as well.
+# DESC: This program 
 # DATA
 # REVISED ############################################################### */
 
 #include <stdlib.h>			// the header of the general-purpose standard library of C
 #include <avr/io.h>			// the header of I/O port
-#include <avr/interrupt.h>	// Needed for interrupt functionality
+#include <avr/interrupt.h>		// Needed for interrupt functionality
 #include <util/delay_basic.h>
+#include "LinkedQueue.h"		// NOTE: changed first struct in this file to only have one char element called value
 
 void mTimer(int count);
 int debug(char input);
@@ -21,47 +22,63 @@ int debug(char input);
 /* ################## MAIN ROUTINE ################## */
 int main(int argc, char *argv[]){
 	
-	char readInput;
+	char readInput;			// variable for reading value from PORTA
+	
 	DDRL = 0xF0;			// set PORT L pin 7:5 as output
 	DDRA = 0x00;			// Set all pins on PORTA to input
 	DDRC = 0xFF;			// Set all pins on PORTC to output
-	uint8_t d = 200;		// variable for timer delay in ms
-	uint8_t pattern;		// Variable for PORTC bit pattern
 	
-	CLKPR = 0x80;		//
-	CLKPR = 0x01;		// Sets CPU clk to 8MHz
+	PORTL = 0x00;			// Set PORTL to zero (all LEDS off)
 	
-	while(1){
-		readInput = PINA;		// Read value from register PINA (Not PORTA)
-// 		PORTC = pattern;		//
-// 		mTimer(d);		// wait for d ms
-		PORTL = (readInput << 4);
-		debug(readInput);
-		
+	CLKPR = 0x80;			//
+	CLKPR = 0x01;			// Sets CPU clk to 8MHz
+
+	link *head;				// The ptr to the head of the queue 
+	link *tail;				// The ptr to the tail of the queue 
+	link *newLink;			// A ptr to a link aggregate data type (struct) 
+	link *rtnLink;			// same as the above 
+	element eTest;			// A variable to hold the aggregate data type known as element 
+	
+	head = NULL;			// Init pointers to NULL
+	tail = NULL;
+	rtnLink = NULL;
+	newLink = NULL;
+	
+	setup(&head, &tail);		// Initialize linked queue
+	clearQueue(&head, &tail);	// Clear any items in queue
+	
+	while(1){ 
+		if ((PINA & 0x04) == 0x00){				// if Left button (PA2 active low) is pressed
+			mTimer(10);							// de bounce on press
+			readInput = PINA & 0x03;			// Read bit 0 and bit 1 from register PINA (Not PORTA)
+ 			PORTL = (readInput << 4);			// display value of input on PORTL LEDS (for debugging, optional)
+ 			initLink(&newLink);					// init a new link 
+			newLink->e.value = readInput;		// store 2 bit value in new link
+			enqueue(&head, &tail, &newLink);	// send the new link to the queue
+			          
+			while((PINA & 0x04) == 0x00);		// wait for button release 
+			mTimer(10);							// de bounce on release
+		}
+		if (isEmpty(&head) == 1){				// this tells us if the queue is empty
+			PORTL = PORTL | 0x80;				// if so, turn on leftmost yellow LED
+		}
+		if ((size(&head, &tail)) == 4){			// if the size of the queue reaches 4 values
+			PORTL = 0x40;						// turn on the leftmost green LED, clear the rest of the PORTL LEDs
+			while(isEmpty(&head) != 1){			// while the queue is not empty
+				PORTC = firstValue(&head).value;	// send the value of the first item in the queue to PORTC (red LEDs)
+				mTimer(2000);						// wait 2000ms = 2s
+				dequeue(&head, &rtnLink);			// remove the item at the head of the list				
+			}
+			PORTL = 0x00;		// clear PORTL
+			PORTC = 0x00;		// clear PORTC
+			clearQueue(&head, &tail);	// Clear any items in queue
+
+		}
+
 	}
 	return (0);
 }
 
-int debug(char input){
-	switch (input){
-		case (0x01):
-			PORTC = 0b00000001;
-			break;
-		case (0x02):
-			PORTC = 0b00000010;
-			break;
-		case (0x04):
-			PORTC = 0b00000100;
-			break;
-		case (0x08):
-			PORTC = 0b00001000;
-			break;
-		default:
-			PORTC = 0b00000000;
-			break;				
-	}	// end switch
-	return(input);
-}	// end debug
 
 void mTimer(int count){
 	int i = 0; // init loop counter, set to zero
@@ -93,3 +110,159 @@ void mTimer(int count){
 	} // end while
 	return;
 }
+
+/**************************************************************************************/
+/***************************** SUBROUTINES ********************************************/
+/**************************************************************************************/
+
+
+/**************************************************************************************
+* DESC: initializes the linked queue to 'NULL' status
+* INPUT: the head and tail pointers by reference
+*/
+
+void setup(link **h,link **t){
+	*h = NULL;		/* Point the head to NOTHING (NULL) */
+	*t = NULL;		/* Point the tail to NOTHING (NULL) */
+	return;
+}/*setup*/
+
+
+
+
+/**************************************************************************************
+* DESC: This initializes a link and returns the pointer to the new link or NULL if error 
+* INPUT: the head and tail pointers by reference
+*/
+void initLink(link **newLink){
+	//link *l;
+	*newLink = malloc(sizeof(link));
+	(*newLink)->next = NULL;
+	return;
+}/*initLink*/
+
+
+
+
+/****************************************************************************************
+*  DESC: Accepts as input a new link by reference, and assigns the head and tail		
+*  of the queue accordingly				
+*  INPUT: the head and tail pointers, and a pointer to the new link that was created 
+*/
+/* will put an item at the tail of the queue */
+void enqueue(link **h, link **t, link **nL){
+
+	if (*t != NULL){
+		/* Not an empty queue */
+		(*t)->next = *nL;
+		*t = *nL; //(*t)->next;
+	}/*if*/
+	else{
+		/* It's an empty Queue */
+		//(*h)->next = *nL;
+		//should be this
+		*h = *nL;
+		*t = *nL;
+	}/* else */
+	return;
+}/*enqueue*/
+
+
+
+
+/**************************************************************************************
+* DESC : Removes the link from the head of the list and assigns it to deQueuedLink
+* INPUT: The head and tail pointers, and a ptr 'deQueuedLink' 
+* 		 which the removed link will be assigned to
+*/
+/* This will remove the link and element within the link from the head of the queue */
+void dequeue(link **h, link **deQueuedLink){
+	/* ENTER YOUR CODE HERE */
+	*deQueuedLink = *h;	// Will set to NULL if Head points to NULL
+	/* Ensure it is not an empty queue */
+	if (*h != NULL){
+		*h = (*h)->next;
+	}/*if*/
+	
+	return;
+}/*dequeue*/
+
+
+
+
+/**************************************************************************************
+* DESC: Peeks at the first element in the list
+* INPUT: The head pointer
+* RETURNS: The element contained within the queue
+*/
+/* This simply allows you to peek at the head element of the queue and returns a NULL pointer if empty */
+element firstValue(link **h){
+	return((*h)->e);
+}/*firstValue*/
+
+
+
+
+
+/**************************************************************************************
+* DESC: deallocates (frees) all the memory consumed by the Queue
+* INPUT: the pointers to the head and the tail
+*/
+/* This clears the queue */
+void clearQueue(link **h, link **t){
+
+	link *temp;
+
+	while (*h != NULL){
+		temp = *h;
+		*h=(*h)->next;
+		free(temp);
+	}/*while*/
+	
+	/* Last but not least set the tail to NULL */
+	*t = NULL;		
+
+	return;
+}/*clearQueue*/
+
+
+
+
+
+/**************************************************************************************
+* DESC: Checks to see whether the queue is empty or not
+* INPUT: The head pointer
+* RETURNS: 1:if the queue is empty, and 0:if the queue is NOT empty
+*/
+/* Check to see if the queue is empty */
+char isEmpty(link **h){
+	/* ENTER YOUR CODE HERE */
+	return(*h == NULL);
+}/*isEmpty*/
+
+
+
+
+
+/**************************************************************************************
+* DESC: Obtains the number of links in the queue
+* INPUT: The head and tail pointer
+* RETURNS: An integer with the number of links in the queue
+*/
+/* returns the size of the queue*/
+int size(link **h, link **t){
+
+	link 	*temp;			/* will store the link while traversing the queue */
+	int 	numElements;
+
+	numElements = 0;
+
+	temp = *h;			/* point to the first item in the list */
+
+	while(temp != NULL){
+		numElements++;
+		temp = temp->next;
+	}/*while*/
+	
+	return(numElements);
+}/*size*/
