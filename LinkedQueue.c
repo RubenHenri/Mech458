@@ -4,16 +4,11 @@
 	Milestone	: 3
 	Title		: Data structures for MCUs and the Linked Queue Library
 
-	Name 1:					Student ID:
-	Name 2:					Student ID:
+	Name 1:	Dmitri Karaman				Student ID:V00853615
+	Name 2:	Ruben Henri					Student ID:V00988496
 	
-	Description: You can change the following after you read it.  Lab3 Demo
-	
-	This main routine will only serve as a testing routine for now. At some point you can comment out
-	The main routine, and can use the following library of functions in your other applications
-
-	To do this...make sure both the .C file and the .H file are in the same directory as the .C file
-	with the MAIN routine (this will make it more convenient)
+	Description: This will implement a FIFO linked list, and take in switch values when a button is pressed.
+	These values are stored in the linked list and after the first is discarded, they will be displayed on the PORTC leds
 */
 
 /* include libraries */
@@ -24,11 +19,7 @@
 /* global variables */
 /* Avoid using these */
 
-/* main routine 
-   You need to add the mtimer function to this project.    */
-
 int main(){	
-	
 	
 	CLKPR = 0x00;		/* Required for timer functionality */
 	CLKPR = 0x01;
@@ -51,74 +42,53 @@ int main(){
 	setup(&head, &tail);
 	
 	int button = 0;
+	uint8_t display = 0b00000000;
 
 	// Reads from the PINA input			
 	while(1){
 		readInput = PINA;
 		button = buttonPress(readInput);
 		
-		if(button < 5){
-			
+		
+		// Inserts a new element to the queue if the button is being pressed
+		if(button < 5){		
+			//Creates a new link and adds to the queue
+			initLink(&newLink);
+			newLink->e.value = button;
+			enqueue(&head, &tail, &newLink);
+			PORTC = head->e.value;
+			//After reading a value, display it and wait 1 second before another value can be read
+			mTimer(1000);
+
+			//If the queue is the required size, display the values with the required delays
+			if(size(&head, &tail) => 4){
+				
+				//Remove the first item and do not use it
+				dequeue(&head, &rtnLink);
+				
+				//Assign the first value to the display
+				display = head->e.value;
+				PORTC = display;
+				mTimer(2000);
+				dequeue(&head, &rtnLink);
+				
+				//Takes the new head and adds the value of it to the bit-shifted previous value
+				display << 2;
+				display = display + head->e.value
+				PORTC = display;
+				mTimer(2000);
+				dequeue(&head, &rtnLink);
+				
+				//This is the final display value, so the queue should be empty
+				display << 2;
+				display = display + head->e.value
+				PORTC = display;
+				mTimer(2000);
+				dequeue(&head, &rtnLink);							
+				
+			}						
 		}
 	}
-	
-	/* 
-		Many of the following lines will test to see if your algorithms will work. You do not necessarily
-		need the MCU attached to the computer to test this, and can do most of the work using the 
-		debugger in the AVR studio while observing the I/O View in the top right corner. Click the tab
-		or PORTC to see how the output changes while 'stepping' through the routines.
-	*/
-	/* Initialize a new link here */
-	initLink(&newLink);
-	newLink->e.itemCode = 3;
-	newLink->e.stage = 4;
-	enqueue(&head, &tail, &newLink);
-	PORTC = head->e.itemCode;	//  You need to insert mTimer in between each output in order to see the values.
-	PORTC = tail->e.stage;		//  Or the LEDs will just flash by very quickly.  You will need about 2 seconds delay.
-
-	initLink(&newLink);
-	newLink->e.itemCode = 5;
-	newLink->e.stage = 6;
-	enqueue(&head, &tail, &newLink);
-	PORTC = head->e.itemCode;
-	PORTC = tail->e.stage;
-
-	initLink(&newLink);
-	newLink->e.itemCode = 7;
-	newLink->e.stage = 8;
-	enqueue(&head, &tail, &newLink);
-	PORTC = head->e.itemCode;
-	PORTC = tail->e.stage;
-
-	PORTC = 0x00;
-
-	/* Tests to see if firstValue works */
-	eTest = firstValue(&head);
-	PORTC = eTest.itemCode;
-	PORTC = 0x00;
-
-	/* Tests if Size works */
-	PORTC = size(&head, &tail);
-
-	/* Tests if dequeue works - Uncomment to use
-	Also, insert mTimer between each output in order to see the values.   */
-	
-	//dequeue(&head, &rtnLink); /* remove the item at the head of the list */
-	//PORTC = rtnLink->e.itemCode;
-	//dequeue(&head, &rtnLink); /* remove the item at the head of the list */
-	//PORTC = rtnLink->e.itemCode;
-	//dequeue(&head, &rtnLink); /* remove the item at the head of the list */
-	//PORTC = rtnLink->e.itemCode;
-	
-	/* Tests is empty */
-	PORTC = isEmpty(&head);
-
-	/* Tests to see if clearQueue works*/
-	clearQueue(&head, &tail);
-	PORTC = size(&head, &tail);
-
-	PORTC = isEmpty(&head);
-
 
 	return(0);
 }/* main */
