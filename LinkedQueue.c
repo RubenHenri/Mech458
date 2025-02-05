@@ -18,6 +18,8 @@
 							/* Make sure you read it!!! */
 /* global variables */
 /* Avoid using these */
+void mTimer(int count);
+uint8_t buttonPress(char input);
 
 int main(){	
 	
@@ -43,6 +45,7 @@ int main(){
 	
 	int button = 0;
 	uint8_t display = 0b00000000;
+	uint8_t tmp = 0b00000000; 
 
 	// Reads from the PINA input			
 	while(1){
@@ -61,7 +64,7 @@ int main(){
 			mTimer(1000);
 
 			//If the queue is the required size, display the values with the required delays
-			if(size(&head, &tail) => 4){
+			if(size(&head, &tail) > 4){
 				
 				//Remove the first item and do not use it
 				dequeue(&head, &rtnLink);
@@ -74,14 +77,16 @@ int main(){
 				
 				//Takes the new head and adds the value of it to the bit-shifted previous value
 				display << 2;
-				display = display + head->e.value
+				tmp = head->e.value;
+				display = display + tmp;
 				PORTC = display;
 				mTimer(2000);
 				dequeue(&head, &rtnLink);
 				
 				//This is the final display value, so the queue should be empty
 				display << 2;
-				display = display + head->e.value
+				tmp = head->e.value;
+				display = display + tmp;
 				PORTC = display;
 				mTimer(2000);
 				dequeue(&head, &rtnLink);							
@@ -99,7 +104,7 @@ int main(){
 /**************************************************************************************/
 
 //There are 4 options for the rocker switch positions while the button is pushed, if you have anything else pass the value 5
-int buttonPress(char input){
+uint8_t buttonPress(char input){
 	switch(input){
 		case(0x01):
 			PORTC = 0b00000001;
