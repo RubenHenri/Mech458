@@ -4,7 +4,7 @@
 # PROGRAM: 3
 # PROJECT: Lab3 Demo
 # GROUP: 10
-# NAME 1: Dmitri Karaman, Student ID
+# NAME 1: Dmitri Karaman, V00853615
 # NAME 2: Ruben Henri, V00988496
 # DESC: This program 
 # DATA
@@ -12,9 +12,9 @@
 
 #include <stdlib.h>			// the header of the general-purpose standard library of C
 #include <avr/io.h>			// the header of I/O port
-#include <avr/interrupt.h>		// Needed for interrupt functionality
+#include <avr/interrupt.h>	// Needed for interrupt functionality
 #include <util/delay_basic.h>
-#include "LinkedQueue.h"		// NOTE: changed first struct in this file to only have one char element called value
+#include "LinkedQueue.h"		
 
 void mTimer(int count);
 int debug(char input);
@@ -22,62 +22,66 @@ int debug(char input);
 /* ################## MAIN ROUTINE ################## */
 int main(int argc, char *argv[]){
 	
-	char readInput;			// variable for reading value from PORTA
+	CLKPR = 0x80;			//
+	CLKPR = 0x01;			// Sets CPU clk to 8MHz
 	
+	char readInput;			// variable for reading value from PORTA
+
 	DDRL = 0xF0;			// set PORT L pin 7:5 as output
 	DDRA = 0x00;			// Set all pins on PORTA to input
 	DDRC = 0xFF;			// Set all pins on PORTC to output
 	
 	PORTL = 0x00;			// Set PORTL to zero (all LEDS off)
 	
-	CLKPR = 0x80;			//
-	CLKPR = 0x01;			// Sets CPU clk to 8MHz
-
 	link *head;				// The ptr to the head of the queue 
 	link *tail;				// The ptr to the tail of the queue 
 	link *newLink;			// A ptr to a link aggregate data type (struct) 
 	link *rtnLink;			// same as the above 
 	element eTest;			// A variable to hold the aggregate data type known as element 
 	
-	head = NULL;			// Init pointers to NULL
+	head = NULL;			// Initialize pointers to NULL
 	tail = NULL;
 	rtnLink = NULL;
 	newLink = NULL;
 	
-	setup(&head, &tail);		// Initialize linked queue
 	clearQueue(&head, &tail);	// Clear any items in queue
 	
-	while(1){ 
-		if ((PINA & 0x04) == 0x00){				// if Left button (PA2 active low) is pressed
-			mTimer(10);							// de bounce on press
-			readInput = PINA & 0x03;			// Read bit 0 and bit 1 from register PINA (Not PORTA)
- 			PORTL = (readInput << 4);			// display value of input on PORTL LEDS (for debugging, optional)
- 			initLink(&newLink);					// init a new link 
-			newLink->e.value = readInput;		// store 2 bit value in new link
-			enqueue(&head, &tail, &newLink);	// send the new link to the queue
-			          
-			while((PINA & 0x04) == 0x00);		// wait for button release 
-			mTimer(10);							// de bounce on release
-		}
-		if (isEmpty(&head) == 1){				// this tells us if the queue is empty
-			PORTL = PORTL | 0x80;				// if so, turn on leftmost yellow LED
-		}
-		if ((size(&head, &tail)) == 4){			// if the size of the queue reaches 4 values
-			PORTL = 0x40;						// turn on the leftmost green LED, clear the rest of the PORTL LEDs
-			while(isEmpty(&head) != 1){			// while the queue is not empty
-				PORTC = firstValue(&head).value;	// send the value of the first item in the queue to PORTC (red LEDs)
-				mTimer(2000);						// wait 2000ms = 2s
-				dequeue(&head, &rtnLink);			// remove the item at the head of the list				
-			}
-			PORTL = 0x00;		// clear PORTL
-			PORTC = 0x00;		// clear PORTC
-			clearQueue(&head, &tail);	// Clear any items in queue
-
-		}
-
-	}
+	while(1){
+		setup(&head, &tail);				// Initialize linked queue
+		
+		while((size(&head, &tail)) < 4){
+			if (isEmpty(&head) == 1){		// this tells us if the queue is empty
+				PORTL = PORTL | 0x80;		// if so, turn on leftmost yellow LED
+				}	// end for
+			} // end while
+		while ((PINA & 0x04) != 0x00);		// wait for Left button (PA2 active low) to be pressed
+		mTimer(20);							// de bounce on press (20ms)
+		readInput = (PINA & 0x03);			// Read bit 0 and bit 1 from register PINA (Not PORTA)
+ 		PORTL = (readInput << 4);			// display value of input on PORTL LEDS (for debugging, optional)
+ 		initLink(&newLink);					// init a new link 
+		newLink->e.itemCode = readInput;	// store 2 bit value in new link
+		enqueue(&head, &tail, &newLink);	// send the new link to the queue
+		while((PINA & 0x04) == 0x00);		// wait for button release 
+		mTimer(20);							// de bounce on release
+		
+		dequeue(&head, &rtnLink);			// remove the item at the head of the list
+		free(rtnLink);						// free the memory allocated for the item we just removed
+		PORTL = 0x40;											// turn on the leftmost green LED, clear the rest of the PORTL LEDs
+		
+		for (int i = 0; i < 3; i++){
+			dequeue(&head, &rtnLink);							// remove the item at the head of the list
+			PORTC = (PORTC | ((rtnLink->e.itemCode) << i*2));	// send the value of the first item in the queue to PORTC (red LEDs)
+			mTimer(2000);										// wait 2000ms = 2s
+			free(rtnLink);										// 
+			} // end for
+		mTimer(5000);
+		PORTL = 0x00;		// clear PORTL
+		PORTC = 0x00;		// clear PORTC
+		clearQueue(&head, &tail);	// Clear any items in queue
+		
+	} // end while(1)
 	return (0);
-}
+}	// end main
 
 
 void mTimer(int count){
@@ -183,9 +187,9 @@ void dequeue(link **h, link **deQueuedLink){
 	if (*h != NULL){
 		*h = (*h)->next;
 	}/*if*/
-	
+		
 	return;
-}/*dequeue*/
+	}/*dequeue*/
 
 
 
